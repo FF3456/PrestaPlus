@@ -1,0 +1,29 @@
+# Dependencias
+node_modules/
+
+# Variables de entorno (NUNCA subir credenciales, tokens ni cadenas de conexión)
+.env
+.env.*
+!.env.example
+
+# Builds de producción
+dist/
+build/
+
+# Archivos subidos por usuarios (se conserva solo .gitkeep y el placeholder)
+server/uploads/*
+!server/uploads/.gitkeep
+!server/uploads/placeholder.svg
+
+# Logs y temporales
+*.log
+npm-debug.log*
+coverage/
+.cache/
+
+# Sistema operativo / editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

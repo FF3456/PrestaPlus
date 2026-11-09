@@ -1,0 +1,28 @@
+digraph C4 {
+  graph [rankdir=TB, fontname="Arial", pad=0.4, nodesep=0.9, ranksep=0.9, bgcolor="white", label=<<b>Diagrama C4 · Nivel 2 (Contenedores) — PRESTA+</b>>, labelloc=t, fontsize=18, fontcolor="#23404A"];
+  node  [fontname="Arial", fontsize=12, shape=box, style="rounded,filled", margin="0.25,0.18"];
+  edge  [fontname="Arial", fontsize=10, color="#30383B", fontcolor="#30383B", penwidth=1.4];
+
+  cliente [label=<<b>Cliente / Prestatario</b><br/><font point-size="10">[Persona]<br/>Solicita préstamos, consulta<br/>contratos y paga</font>>, fillcolor="#496A73", fontcolor="white", color="#23404A", shape=box];
+  staff   [label=<<b>Empleado / Administrador</b><br/><font point-size="10">[Persona]<br/>Tasa, aprueba, registra pagos<br/>y controla custodia</font>>, fillcolor="#496A73", fontcolor="white", color="#23404A"];
+
+  subgraph cluster_sys {
+    label=<<b>Sistema PRESTA+</b> [límite del sistema]>; labeljust=l; fontcolor="#23404A"; style="dashed,rounded"; color="#23404A"; fontsize=13; margin=24;
+    spa [label=<<b>SPA Cliente</b><br/><font point-size="10">[Contenedor: React 18 + Vite + Tailwind CSS]<br/>Portal del cliente y panel del personal.<br/>AuthContext, rutas protegidas por rol</font>>, fillcolor="#23404A", fontcolor="white", color="#1B323A"];
+    api [label=<<b>API REST</b><br/><font point-size="10">[Contenedor: Node.js 18+ / Express 4]<br/>JWT + bcrypt, RBAC, validación,<br/>reglas de préstamos, Swagger UI /api-docs</font>>, fillcolor="#23404A", fontcolor="white", color="#1B323A"];
+    files [label=<<b>Almacén de imágenes</b><br/><font point-size="10">[Contenedor: sistema de archivos / volumen]<br/>Fotografías de garantías<br/>(/uploads, nombres aleatorios)</font>>, fillcolor="#E9EEF0", fontcolor="#30383B", color="#23404A"];
+    db  [label=<<b>Base de datos</b><br/><font point-size="10">[Contenedor: MongoDB 7 / Atlas + Mongoose 8]<br/>users, collaterals, loanrequests, loans,<br/>payments, notifications, counters</font>>, fillcolor="#5F8068", fontcolor="white", color="#3F5B48", shape=cylinder, style="filled"];
+  }
+
+  smtp [label=<<b>Servicio de correo (SMTP)</b><br/><font point-size="10">[Sistema externo]<br/>OTP y recuperación de contraseña</font>>, fillcolor="#D3DEE1", fontcolor="#30383B", color="#496A73"];
+
+  cliente -> spa [label="Usa\n[HTTPS]"];
+  staff   -> spa [label="Usa\n[HTTPS]"];
+  spa -> api [label="Llamadas REST JSON\nAuthorization: Bearer <JWT>\n[HTTPS]"];
+  api -> db  [label="Lee / escribe documentos\n[Mongoose · TLS]"];
+  api -> files [label="Guarda y sirve fotos\n[multer]"];
+  api -> smtp [label="Envía correos\n[SMTP]"];
+  spa -> files [label="Muestra fotos\n[HTTPS GET /uploads]", style=dashed];
+
+  {rank=same; cliente; staff}
+}

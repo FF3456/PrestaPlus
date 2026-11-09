@@ -1,0 +1,5217 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "PRESTA+ API",
+    "version": "1.0.0",
+    "description": "API REST de la plataforma inteligente de préstamos prendarios PRESTA+ (Tecnologías en Internet · Universidad Adventista de Bolivia).\n\n**Autenticación:** inicie sesión en `POST /auth/login`, copie el `token` y pulse **Authorize** (esquema Bearer) para probar los endpoints protegidos.\n\n**Roles (RBAC):** `cliente`, `empleado`, `admin`. Cada operación indica en `x-roles` quién puede invocarla.\n\n**Formato de respuesta:** éxito `{ success: true, data, meta? }`; error `{ success: false, message, code, details? }`.",
+    "contact": {
+      "name": "Equipo PRESTA+"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:4000/api",
+      "description": "Local"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Sistema"
+    },
+    {
+      "name": "Autenticación"
+    },
+    {
+      "name": "Usuarios"
+    },
+    {
+      "name": "Garantías"
+    },
+    {
+      "name": "Solicitudes"
+    },
+    {
+      "name": "Préstamos"
+    },
+    {
+      "name": "Pagos"
+    },
+    {
+      "name": "Notificaciones"
+    },
+    {
+      "name": "Dashboard"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "Sistema"
+        ],
+        "summary": "Estado del servicio y de la base de datos",
+        "x-roles": [
+          "público"
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Servicio operativo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "example": "ok"
+                        },
+                        "db": {
+                          "type": "string",
+                          "example": "connected"
+                        },
+                        "uptime": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Registrar cliente y enviar OTP por correo (RF-001)",
+        "x-roles": [
+          "público"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "firstName",
+                  "lastName",
+                  "email",
+                  "password",
+                  "documentId"
+                ],
+                "properties": {
+                  "firstName": {
+                    "type": "string",
+                    "example": "Carlos"
+                  },
+                  "lastName": {
+                    "type": "string",
+                    "example": "Mendoza"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "cliente@ejemplo.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "minLength": 8,
+                    "maxLength": 72,
+                    "description": "8-72 caracteres con mayúscula, minúscula y número",
+                    "example": "Cliente#2026"
+                  },
+                  "documentId": {
+                    "type": "string",
+                    "description": "CI; se almacena cifrado con AES-256-GCM",
+                    "example": "7654321"
+                  },
+                  "phone": {
+                    "type": "string",
+                    "example": "+591 70012345"
+                  },
+                  "address": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Cuenta creada; se envió un código OTP al correo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "email": {
+                          "type": "string",
+                          "format": "email",
+                          "example": "cliente@ejemplo.com"
+                        },
+                        "devOtp": {
+                          "type": "string",
+                          "description": "Solo si DEV_EXPOSE_CODES=true"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Datos de entrada inválidos",
+                  "code": "VALIDATION_ERROR",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "Correo electrónico inválido"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de estado o duplicado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "La solicitud ya fue resuelta",
+                  "code": "INVALID_STATE"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiadas solicitudes (rate limit)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/verify-otp": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Verificar OTP y abrir sesión (RF-001)",
+        "x-roles": [
+          "público"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "code"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "cliente@ejemplo.com"
+                  },
+                  "code": {
+                    "type": "string",
+                    "pattern": "^\\d{6}$",
+                    "example": "482913"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cuenta verificada; devuelve JWT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Datos de entrada inválidos",
+                  "code": "VALIDATION_ERROR",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "Correo electrónico inválido"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiadas solicitudes (rate limit)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/resend-otp": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Reenviar código OTP",
+        "x-roles": [
+          "público"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "cliente@ejemplo.com"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Respuesta genérica (no revela si el correo existe)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Datos de entrada inválidos",
+                  "code": "VALIDATION_ERROR",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "Correo electrónico inválido"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiadas solicitudes (rate limit)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Iniciar sesión y obtener JWT (RF-002)",
+        "description": "Devuelve un JWT firmado (HS256) con expiración configurable (60 min por defecto). Enviarlo luego como `Authorization: Bearer <token>`.",
+        "x-roles": [
+          "público"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "cliente@ejemplo.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Autenticación exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Datos de entrada inválidos",
+                  "code": "VALIDATION_ERROR",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "Correo electrónico inválido"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Cuenta sin verificar o desactivada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiadas solicitudes (rate limit)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/forgot-password": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Solicitar restablecimiento de contraseña (RF-003)",
+        "x-roles": [
+          "público"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "cliente@ejemplo.com"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Respuesta genérica",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Datos de entrada inválidos",
+                  "code": "VALIDATION_ERROR",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "Correo electrónico inválido"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiadas solicitudes (rate limit)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Restablecer contraseña con token (RF-003)",
+        "x-roles": [
+          "público"
+        ],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "token",
+                  "password"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "cliente@ejemplo.com"
+                  },
+                  "token": {
+                    "type": "string",
+                    "description": "Token de 64 caracteres hex recibido por correo"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "minLength": 8,
+                    "maxLength": 72,
+                    "description": "8-72 caracteres con mayúscula, minúscula y número",
+                    "example": "Cliente#2026"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contraseña actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Datos de entrada inválidos",
+                  "code": "VALIDATION_ERROR",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "Correo electrónico inválido"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiadas solicitudes (rate limit)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Usuario de la sesión activa (RF-002)",
+        "x-roles": [
+          "cliente",
+          "empleado",
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usuario autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/me": {
+      "put": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Actualizar perfil propio (RF-014)",
+        "x-roles": [
+          "cliente",
+          "empleado",
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "firstName": {
+                    "type": "string"
+                  },
+                  "lastName": {
+                    "type": "string"
+                  },
+                  "phone": {
+                    "type": "string"
+                  },
+                  "address": {
+                    "type": "string"
+                  },
+                  "documentId": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Perfil actualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Datos de entrada inválidos",
+                  "code": "VALIDATION_ERROR",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "Correo electrónico inválido"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/me/password": {
+      "patch": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Cambiar contraseña (RF-014)",
+        "x-roles": [
+          "cliente",
+          "empleado",
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "currentPassword",
+                  "newPassword"
+                ],
+                "properties": {
+                  "currentPassword": {
+                    "type": "string",
+                    "format": "password"
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "format": "password",
+                    "minLength": 8,
+                    "maxLength": 72,
+                    "description": "8-72 caracteres con mayúscula, minúscula y número",
+                    "example": "Cliente#2026"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contraseña actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Datos de entrada inválidos",
+                  "code": "VALIDATION_ERROR",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "Correo electrónico inválido"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Regla de negocio no satisfecha",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "El monto aprobado excede el máximo permitido",
+                  "code": "AMOUNT_EXCEEDS_MAX"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users": {
+      "get": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Listar usuarios (administración)",
+        "x-roles": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Número de página (por defecto 1)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Elementos por página (máx. 100)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "role",
+            "in": "query",
+            "required": false,
+            "description": "Filtrar por rol",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "cliente",
+                "empleado",
+                "admin"
+              ]
+            }
+          },
+          {
+            "name": "active",
+            "in": "query",
+            "required": false,
+            "description": "Filtrar por estado",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "Buscar por nombre o correo",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado paginado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/User"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMeta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos (RBAC) o recurso ajeno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "No tienes permisos para realizar esta acción",
+                  "code": "FORBIDDEN"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/staff": {
+      "post": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Crear empleado o administrador",
+        "x-roles": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "firstName",
+                  "lastName",
+                  "email",
+                  "password",
+                  "role"
+                ],
+                "properties": {
+                  "firstName": {
+                    "type": "string"
+                  },
+                  "lastName": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "cliente@ejemplo.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "minLength": 8,
+                    "maxLength": 72,
+                    "description": "8-72 caracteres con mayúscula, minúscula y número",
+                    "example": "Cliente#2026"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "empleado",
+                      "admin"
+                    ]
+                  },
+                  "phone": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Usuario creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Datos de entrada inválidos",
+                  "code": "VALIDATION_ERROR",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "Correo electrónico inválido"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos (RBAC) o recurso ajeno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "No tienes permisos para realizar esta acción",
+                  "code": "FORBIDDEN"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de estado o duplicado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "La solicitud ya fue resuelta",
+                  "code": "INVALID_STATE"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{id}/active": {
+      "patch": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Activar o desactivar una cuenta",
+        "x-roles": [
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Identificador (ObjectId de MongoDB)",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$",
+              "example": "665f1c2e8b3a4c0012a4b5c6"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "active"
+                ],
+                "properties": {
+                  "active": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cuenta actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Datos de entrada inválidos",
+                  "code": "VALIDATION_ERROR",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "Correo electrónico inválido"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos (RBAC) o recurso ajeno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "No tienes permisos para realizar esta acción",
+                  "code": "FORBIDDEN"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Recurso no encontrado",
+                  "code": "NOT_FOUND"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Regla de negocio no satisfecha",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "El monto aprobado excede el máximo permitido",
+                  "code": "AMOUNT_EXCEEDS_MAX"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/collaterals/pre-evaluation": {
+      "post": {
+        "tags": [
+          "Garantías"
+        ],
+        "summary": "Pre-evaluar garantía: valor y préstamo estimado (RF-005)",
+        "x-roles": [
+          "cliente",
+          "empleado",
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "category",
+                  "condition",
+                  "declaredValue"
+                ],
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "enum": [
+                      "electronica",
+                      "joyas",
+                      "herramientas",
+                      "vehiculos",
+                      "otros"
+                    ]
+                  },
+                  "condition": {
+                    "type": "string",
+                    "enum": [
+                      "excelente",
+                      "bueno",
+                      "regular",
+                      "malo"
+                    ]
+                  },
+                  "declaredValue": {
+                    "type": "number",
+                    "example": 3500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Estimación inicial",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/PreEvaluation"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Datos de entrada inválidos",
+                  "code": "VALIDATION_ERROR",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "Correo electrónico inválido"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/collaterals": {
+      "post": {
+        "tags": [
+          "Garantías"
+        ],
+        "summary": "Registrar garantía con fotografías (RF-004)",
+        "description": "multipart/form-data. Debe adjuntar entre 1 y 5 imágenes JPG/PNG/WEBP (máx. 5 MB c/u) en el campo `photos`.",
+        "x-roles": [
+          "cliente"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "category",
+                  "brand",
+                  "model",
+                  "serialNumber",
+                  "condition",
+                  "declaredValue",
+                  "photos"
+                ],
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "enum": [
+                      "electronica",
+                      "joyas",
+                      "herramientas",
+                      "vehiculos",
+                      "otros"
+                    ]
+                  },
+                  "brand": {
+                    "type": "string",
+                    "example": "Samsung"
+                  },
+                  "model": {
+                    "type": "string",
+                    "example": "Galaxy S23"
+                  },
+                  "serialNumber": {
+                    "type": "string",
+                    "example": "356938035643809"
+                  },
+                  "condition": {
+                    "type": "string",
+                    "enum": [
+                      "excelente",
+                      "bueno",
+                      "regular",
+                      "malo"
+                    ]
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "declaredValue": {
+                    "type": "number",
+                    "example": 3500
+                  },
+                  "photos": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    },
+                    "minItems": 1,
+                    "maxItems": 5
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Garantía registrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "collateral": {
+                          "$ref": "#/components/schemas/Collateral"
+                        },
+                        "preEvaluation": {
+                          "$ref": "#/components/schemas/PreEvaluation"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Datos de entrada inválidos",
+                  "code": "VALIDATION_ERROR",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "Correo electrónico inválido"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos (RBAC) o recurso ajeno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "No tienes permisos para realizar esta acción",
+                  "code": "FORBIDDEN"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de estado o duplicado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "La solicitud ya fue resuelta",
+                  "code": "INVALID_STATE"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Garantías"
+        ],
+        "summary": "Listar garantías (propias para clientes; todas para personal)",
+        "x-roles": [
+          "cliente",
+          "empleado",
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Número de página (por defecto 1)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Elementos por página (máx. 100)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "description": "Estado",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "registrada",
+                "en_evaluacion",
+                "en_custodia",
+                "rescatada",
+                "rechazada"
+              ]
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "description": "Categoría",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "electronica",
+                "joyas",
+                "herramientas",
+                "vehiculos",
+                "otros"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "Buscar por marca, modelo o serie",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado paginado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Collateral"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMeta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/collaterals/{id}": {
+      "get": {
+        "tags": [
+          "Garantías"
+        ],
+        "summary": "Detalle de una garantía",
+        "x-roles": [
+          "cliente",
+          "empleado",
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Identificador (ObjectId de MongoDB)",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$",
+              "example": "665f1c2e8b3a4c0012a4b5c6"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Garantía",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Collateral"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Datos de entrada inválidos",
+                  "code": "VALIDATION_ERROR",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "Correo electrónico inválido"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos (RBAC) o recurso ajeno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "No tienes permisos para realizar esta acción",
+                  "code": "FORBIDDEN"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Recurso no encontrado",
+                  "code": "NOT_FOUND"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Garantías"
+        ],
+        "summary": "Editar garantía registrada (antes de solicitar)",
+        "x-roles": [
+          "cliente"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Identificador (ObjectId de MongoDB)",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$",
+              "example": "665f1c2e8b3a4c0012a4b5c6"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "enum": [
+                      "electronica",
+                      "joyas",
+                      "herramientas",
+                      "vehiculos",
+                      "otros"
+                    ]
+                  },
+                  "brand": {
+                    "type": "string"
+                  },
+                  "model": {
+                    "type": "string"
+                  },
+                  "serialNumber": {
+                    "type": "string"
+                  },
+                  "condition": {
+                    "type": "string",
+                    "enum": [
+                      "excelente",
+                      "bueno",
+                      "regular",
+                      "malo"
+                    ]
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "declaredValue": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Garantía actualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Collateral"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Datos de entrada inválidos",
+                  "code": "VALIDATION_ERROR",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "Correo electrónico inválido"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos (RBAC) o recurso ajeno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "No tienes permisos para realizar esta acción",
+                  "code": "FORBIDDEN"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Recurso no encontrado",
+                  "code": "NOT_FOUND"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de estado o duplicado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "La solicitud ya fue resuelta",
+                  "code": "INVALID_STATE"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Garantías"
+        ],
+        "summary": "Eliminar garantía registrada (antes de solicitar)",
+        "x-roles": [
+          "cliente"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Identificador (ObjectId de MongoDB)",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$",
+              "example": "665f1c2e8b3a4c0012a4b5c6"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Eliminada"
+          },
+          "400": {
+            "description": "Datos de entrada inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Datos de entrada inválidos",
+                  "code": "VALIDATION_ERROR",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "Correo electrónico inválido"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos (RBAC) o recurso ajeno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "No tienes permisos para realizar esta acción",
+                  "code": "FORBIDDEN"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Recurso no encontrado",
+                  "code": "NOT_FOUND"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de estado o duplicado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "La solicitud ya fue resuelta",
+                  "code": "INVALID_STATE"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/loan-requests": {
+      "post": {
+        "tags": [
+          "Solicitudes"
+        ],
+        "summary": "Enviar solicitud de préstamo (CU-02)",
+        "x-roles": [
+          "cliente"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "collateralId",
+                  "requestedAmount"
+                ],
+                "properties": {
+                  "collateralId": {
+                    "type": "string",
+                    "example": "665f1c2e8b3a4c0012a4b5c6"
+                  },
+                  "requestedAmount": {
+                    "type": "number",
+                    "example": 1200
+                  },
+                  "termDays": {
+                    "type": "integer",
+                    "minimum": 7,
+                    "maximum": 180,
+                    "default": 30
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Solicitud en evaluación",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/LoanRequest"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Datos de entrada inválidos",
+                  "code": "VALIDATION_ERROR",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "Correo electrónico inválido"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos (RBAC) o recurso ajeno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "No tienes permisos para realizar esta acción",
+                  "code": "FORBIDDEN"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Recurso no encontrado",
+                  "code": "NOT_FOUND"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de estado o duplicado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "La solicitud ya fue resuelta",
+                  "code": "INVALID_STATE"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Regla de negocio no satisfecha",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "El monto aprobado excede el máximo permitido",
+                  "code": "AMOUNT_EXCEEDS_MAX"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Solicitudes"
+        ],
+        "summary": "Listar solicitudes (RF-007)",
+        "x-roles": [
+          "cliente",
+          "empleado",
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Número de página (por defecto 1)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Elementos por página (máx. 100)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "description": "Estado",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "en_evaluacion",
+                "aprobada",
+                "rechazada"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado paginado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/LoanRequest"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMeta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/loan-requests/{id}": {
+      "get": {
+        "tags": [
+          "Solicitudes"
+        ],
+        "summary": "Detalle de solicitud",
+        "x-roles": [
+          "cliente",
+          "empleado",
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Identificador (ObjectId de MongoDB)",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$",
+              "example": "665f1c2e8b3a4c0012a4b5c6"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Solicitud",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/LoanRequest"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Datos de entrada inválidos",
+                  "code": "VALIDATION_ERROR",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "Correo electrónico inválido"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos (RBAC) o recurso ajeno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "No tienes permisos para realizar esta acción",
+                  "code": "FORBIDDEN"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Recurso no encontrado",
+                  "code": "NOT_FOUND"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/loan-requests/{id}/appraisal": {
+      "patch": {
+        "tags": [
+          "Solicitudes"
+        ],
+        "summary": "Registrar tasación: monto máximo y tasa (RF-006)",
+        "x-roles": [
+          "empleado",
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Identificador (ObjectId de MongoDB)",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$",
+              "example": "665f1c2e8b3a4c0012a4b5c6"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "marketValue"
+                ],
+                "properties": {
+                  "marketValue": {
+                    "type": "number",
+                    "example": 3200
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Solicitud tasada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/LoanRequest"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Datos de entrada inválidos",
+                  "code": "VALIDATION_ERROR",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "Correo electrónico inválido"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos (RBAC) o recurso ajeno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "No tienes permisos para realizar esta acción",
+                  "code": "FORBIDDEN"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Recurso no encontrado",
+                  "code": "NOT_FOUND"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de estado o duplicado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "La solicitud ya fue resuelta",
+                  "code": "INVALID_STATE"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/loan-requests/{id}/approve": {
+      "patch": {
+        "tags": [
+          "Solicitudes"
+        ],
+        "summary": "Aprobar solicitud y generar contrato (CU-03, RF-007/008)",
+        "x-roles": [
+          "empleado",
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Identificador (ObjectId de MongoDB)",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$",
+              "example": "665f1c2e8b3a4c0012a4b5c6"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "approvedAmount"
+                ],
+                "properties": {
+                  "approvedAmount": {
+                    "type": "number",
+                    "example": 1500
+                  },
+                  "termDays": {
+                    "type": "integer",
+                    "example": 30
+                  },
+                  "custodyLocation": {
+                    "type": "string",
+                    "example": "Bóveda A-12"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Solicitud aprobada con préstamo creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "request": {
+                          "$ref": "#/components/schemas/LoanRequest"
+                        },
+                        "loan": {
+                          "$ref": "#/components/schemas/Loan"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Datos de entrada inválidos",
+                  "code": "VALIDATION_ERROR",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "Correo electrónico inválido"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos (RBAC) o recurso ajeno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "No tienes permisos para realizar esta acción",
+                  "code": "FORBIDDEN"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Recurso no encontrado",
+                  "code": "NOT_FOUND"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de estado o duplicado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "La solicitud ya fue resuelta",
+                  "code": "INVALID_STATE"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Regla de negocio no satisfecha",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "El monto aprobado excede el máximo permitido",
+                  "code": "AMOUNT_EXCEEDS_MAX"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/loan-requests/{id}/reject": {
+      "patch": {
+        "tags": [
+          "Solicitudes"
+        ],
+        "summary": "Rechazar solicitud con motivo (RF-007)",
+        "x-roles": [
+          "empleado",
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Identificador (ObjectId de MongoDB)",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$",
+              "example": "665f1c2e8b3a4c0012a4b5c6"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "reason"
+                ],
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "example": "El bien no cumple los criterios de aceptación"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Solicitud rechazada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/LoanRequest"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Datos de entrada inválidos",
+                  "code": "VALIDATION_ERROR",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "Correo electrónico inválido"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos (RBAC) o recurso ajeno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "No tienes permisos para realizar esta acción",
+                  "code": "FORBIDDEN"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Recurso no encontrado",
+                  "code": "NOT_FOUND"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de estado o duplicado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "La solicitud ya fue resuelta",
+                  "code": "INVALID_STATE"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/loans": {
+      "get": {
+        "tags": [
+          "Préstamos"
+        ],
+        "summary": "Listar préstamos con saldo e interés vigentes (RF-009, RF-011)",
+        "x-roles": [
+          "cliente",
+          "empleado",
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Número de página (por defecto 1)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Elementos por página (máx. 100)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "description": "Estado",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "activo",
+                "vencido",
+                "rescatado"
+              ]
+            }
+          },
+          {
+            "name": "dueSoon",
+            "in": "query",
+            "required": false,
+            "description": "Solo préstamos próximos a vencer (7 días)",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "description": "Buscar por número de contrato",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado paginado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Loan"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMeta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/loans/custody": {
+      "get": {
+        "tags": [
+          "Préstamos"
+        ],
+        "summary": "Garantías en custodia (RF-011)",
+        "x-roles": [
+          "empleado",
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Número de página (por defecto 1)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Elementos por página (máx. 100)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado paginado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Loan"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMeta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos (RBAC) o recurso ajeno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "No tienes permisos para realizar esta acción",
+                  "code": "FORBIDDEN"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/loans/{id}": {
+      "get": {
+        "tags": [
+          "Préstamos"
+        ],
+        "summary": "Detalle del préstamo con cotización (RF-009)",
+        "x-roles": [
+          "cliente",
+          "empleado",
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Identificador (ObjectId de MongoDB)",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$",
+              "example": "665f1c2e8b3a4c0012a4b5c6"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Préstamo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Loan"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Datos de entrada inválidos",
+                  "code": "VALIDATION_ERROR",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "Correo electrónico inválido"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos (RBAC) o recurso ajeno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "No tienes permisos para realizar esta acción",
+                  "code": "FORBIDDEN"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Recurso no encontrado",
+                  "code": "NOT_FOUND"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/loans/{id}/quote": {
+      "get": {
+        "tags": [
+          "Préstamos"
+        ],
+        "summary": "Cotización: interés devengado y monto de rescate",
+        "x-roles": [
+          "cliente",
+          "empleado",
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Identificador (ObjectId de MongoDB)",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$",
+              "example": "665f1c2e8b3a4c0012a4b5c6"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cotización",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Quote"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Datos de entrada inválidos",
+                  "code": "VALIDATION_ERROR",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "Correo electrónico inválido"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos (RBAC) o recurso ajeno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "No tienes permisos para realizar esta acción",
+                  "code": "FORBIDDEN"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Recurso no encontrado",
+                  "code": "NOT_FOUND"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/loans/{id}/contract": {
+      "get": {
+        "tags": [
+          "Préstamos"
+        ],
+        "summary": "Contrato digital (RF-008)",
+        "x-roles": [
+          "cliente",
+          "empleado",
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Identificador (ObjectId de MongoDB)",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$",
+              "example": "665f1c2e8b3a4c0012a4b5c6"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contrato",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Contract"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Datos de entrada inválidos",
+                  "code": "VALIDATION_ERROR",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "Correo electrónico inválido"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos (RBAC) o recurso ajeno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "No tienes permisos para realizar esta acción",
+                  "code": "FORBIDDEN"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Recurso no encontrado",
+                  "code": "NOT_FOUND"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/loans/{id}/payments": {
+      "get": {
+        "tags": [
+          "Pagos"
+        ],
+        "summary": "Historial de operaciones del préstamo (RF-009)",
+        "x-roles": [
+          "cliente",
+          "empleado",
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Identificador (ObjectId de MongoDB)",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$",
+              "example": "665f1c2e8b3a4c0012a4b5c6"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pagos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Payment"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Datos de entrada inválidos",
+                  "code": "VALIDATION_ERROR",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "Correo electrónico inválido"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos (RBAC) o recurso ajeno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "No tienes permisos para realizar esta acción",
+                  "code": "FORBIDDEN"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Recurso no encontrado",
+                  "code": "NOT_FOUND"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Pagos"
+        ],
+        "summary": "Registrar abono, pago de interés, renovación o rescate (CU-05, RF-010)",
+        "description": "Reglas: `pago_interes` y `renovacion` deben igualar el interés devengado; `abono_capital` se aplica primero al interés; `rescate` debe igualar capital + interés (liquida el préstamo y libera la garantía).",
+        "x-roles": [
+          "empleado",
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Identificador (ObjectId de MongoDB)",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$",
+              "example": "665f1c2e8b3a4c0012a4b5c6"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "type",
+                  "amount"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "abono_capital",
+                      "pago_interes",
+                      "renovacion",
+                      "rescate"
+                    ]
+                  },
+                  "amount": {
+                    "type": "number",
+                    "example": 60
+                  },
+                  "note": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Pago registrado con comprobante",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "payment": {
+                          "$ref": "#/components/schemas/Payment"
+                        },
+                        "loan": {
+                          "$ref": "#/components/schemas/Loan"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Datos de entrada inválidos",
+                  "code": "VALIDATION_ERROR",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "Correo electrónico inválido"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos (RBAC) o recurso ajeno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "No tienes permisos para realizar esta acción",
+                  "code": "FORBIDDEN"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Recurso no encontrado",
+                  "code": "NOT_FOUND"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicto de estado o duplicado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "La solicitud ya fue resuelta",
+                  "code": "INVALID_STATE"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Regla de negocio no satisfecha",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "El monto aprobado excede el máximo permitido",
+                  "code": "AMOUNT_EXCEEDS_MAX"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/payments": {
+      "get": {
+        "tags": [
+          "Pagos"
+        ],
+        "summary": "Registro de pagos (propios para clientes; todos para personal)",
+        "x-roles": [
+          "cliente",
+          "empleado",
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Número de página (por defecto 1)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Elementos por página (máx. 100)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "description": "Tipo",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "abono_capital",
+                "pago_interes",
+                "renovacion",
+                "rescate"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado paginado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Payment"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMeta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/payments/{id}": {
+      "get": {
+        "tags": [
+          "Pagos"
+        ],
+        "summary": "Comprobante digital de un pago (RF-010)",
+        "x-roles": [
+          "cliente",
+          "empleado",
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Identificador (ObjectId de MongoDB)",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$",
+              "example": "665f1c2e8b3a4c0012a4b5c6"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Comprobante",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Payment"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Datos de entrada inválidos",
+                  "code": "VALIDATION_ERROR",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "Correo electrónico inválido"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos (RBAC) o recurso ajeno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "No tienes permisos para realizar esta acción",
+                  "code": "FORBIDDEN"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Recurso no encontrado",
+                  "code": "NOT_FOUND"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notifications": {
+      "get": {
+        "tags": [
+          "Notificaciones"
+        ],
+        "summary": "Listar notificaciones propias (RF-012)",
+        "x-roles": [
+          "cliente",
+          "empleado",
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "description": "Número de página (por defecto 1)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Elementos por página (máx. 100)",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "unread",
+            "in": "query",
+            "required": false,
+            "description": "Solo no leídas",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado paginado (meta.unread = no leídas)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Notification"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMeta"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notifications/unread-count": {
+      "get": {
+        "tags": [
+          "Notificaciones"
+        ],
+        "summary": "Cantidad de notificaciones sin leer",
+        "x-roles": [
+          "cliente",
+          "empleado",
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "unread": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notifications/read-all": {
+      "patch": {
+        "tags": [
+          "Notificaciones"
+        ],
+        "summary": "Marcar todas como leídas",
+        "x-roles": [
+          "cliente",
+          "empleado",
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Actualizadas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "updated": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notifications/{id}/read": {
+      "patch": {
+        "tags": [
+          "Notificaciones"
+        ],
+        "summary": "Marcar una notificación como leída",
+        "x-roles": [
+          "cliente",
+          "empleado",
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Identificador (ObjectId de MongoDB)",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$",
+              "example": "665f1c2e8b3a4c0012a4b5c6"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notificación",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Notification"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Datos de entrada inválidos",
+                  "code": "VALIDATION_ERROR",
+                  "details": [
+                    {
+                      "field": "email",
+                      "message": "Correo electrónico inválido"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Recurso no encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Recurso no encontrado",
+                  "code": "NOT_FOUND"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dashboard/summary": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Resumen administrativo (RF-013)",
+        "x-roles": [
+          "empleado",
+          "admin"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Indicadores",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/StaffSummary"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos (RBAC) o recurso ajeno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "No tienes permisos para realizar esta acción",
+                  "code": "FORBIDDEN"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dashboard/me": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Resumen del portal del cliente",
+        "x-roles": [
+          "cliente"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Indicadores",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "activeLoans": {
+                          "type": "integer"
+                        },
+                        "totalOutstanding": {
+                          "type": "number"
+                        },
+                        "totalPayoff": {
+                          "type": "number"
+                        },
+                        "overdueLoans": {
+                          "type": "integer"
+                        },
+                        "pendingRequests": {
+                          "type": "integer"
+                        },
+                        "unreadNotifications": {
+                          "type": "integer"
+                        },
+                        "nextDue": {
+                          "type": "object",
+                          "nullable": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No autenticado o token inválido/expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "Token inválido",
+                  "code": "AUTH_INVALID_TOKEN"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sin permisos (RBAC) o recurso ajeno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "success": false,
+                  "message": "No tienes permisos para realizar esta acción",
+                  "code": "FORBIDDEN"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT obtenido en /auth/login"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "example": "VALIDATION_ERROR"
+          },
+          "details": {
+            "description": "Detalle opcional (lista de campos inválidos u otros datos)"
+          }
+        }
+      },
+      "PageMeta": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "pages": {
+            "type": "integer"
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "665f1c2e8b3a4c0012a4b5c6"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "cliente@ejemplo.com"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "cliente",
+              "empleado",
+              "admin"
+            ]
+          },
+          "documentId": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "isVerified": {
+            "type": "boolean"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "token": {
+                "type": "string",
+                "example": "eyJhbGciOiJIUzI1NiIs..."
+              },
+              "tokenType": {
+                "type": "string",
+                "example": "Bearer"
+              },
+              "expiresIn": {
+                "type": "string",
+                "example": "60m"
+              },
+              "user": {
+                "$ref": "#/components/schemas/User"
+              }
+            }
+          }
+        }
+      },
+      "PreEvaluation": {
+        "type": "object",
+        "properties": {
+          "estimatedValue": {
+            "type": "number",
+            "example": 2275
+          },
+          "loanToValue": {
+            "type": "number",
+            "example": 0.5
+          },
+          "estimatedLoan": {
+            "type": "number",
+            "example": 1137.5
+          },
+          "monthlyRate": {
+            "type": "number",
+            "example": 4
+          }
+        }
+      },
+      "Collateral": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "665f1c2e8b3a4c0012a4b5c6"
+          },
+          "owner": {
+            "oneOf": [
+              {
+                "type": "string",
+                "example": "665f1c2e8b3a4c0012a4b5c6"
+              },
+              {
+                "$ref": "#/components/schemas/User"
+              }
+            ]
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "electronica",
+              "joyas",
+              "herramientas",
+              "vehiculos",
+              "otros"
+            ]
+          },
+          "brand": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "serialNumber": {
+            "type": "string"
+          },
+          "condition": {
+            "type": "string",
+            "enum": [
+              "excelente",
+              "bueno",
+              "regular",
+              "malo"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "photos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "example": "/uploads/9f2c...e1.jpg"
+                },
+                "filename": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "declaredValue": {
+            "type": "number"
+          },
+          "estimatedValue": {
+            "type": "number"
+          },
+          "appraisedValue": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "registrada",
+              "en_evaluacion",
+              "en_custodia",
+              "rescatada",
+              "rechazada"
+            ]
+          },
+          "custodyLocation": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "LoanRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "665f1c2e8b3a4c0012a4b5c6"
+          },
+          "client": {
+            "$ref": "#/components/schemas/User"
+          },
+          "collateral": {
+            "$ref": "#/components/schemas/Collateral"
+          },
+          "requestedAmount": {
+            "type": "number"
+          },
+          "termDays": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "en_evaluacion",
+              "aprobada",
+              "rechazada"
+            ]
+          },
+          "preEvaluation": {
+            "$ref": "#/components/schemas/PreEvaluation"
+          },
+          "appraisal": {
+            "type": "object",
+            "properties": {
+              "marketValue": {
+                "type": "number"
+              },
+              "maxLoan": {
+                "type": "number"
+              },
+              "monthlyRate": {
+                "type": "number"
+              },
+              "appraisedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          },
+          "approvedAmount": {
+            "type": "number"
+          },
+          "rejectionReason": {
+            "type": "string"
+          },
+          "loan": {
+            "type": "string",
+            "example": "665f1c2e8b3a4c0012a4b5c6"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Quote": {
+        "type": "object",
+        "properties": {
+          "outstandingPrincipal": {
+            "type": "number"
+          },
+          "accruedInterest": {
+            "type": "number"
+          },
+          "payoffAmount": {
+            "type": "number"
+          },
+          "interestDays": {
+            "type": "integer"
+          },
+          "daysToDue": {
+            "type": "integer"
+          },
+          "isOverdue": {
+            "type": "boolean"
+          },
+          "isDueSoon": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Loan": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "665f1c2e8b3a4c0012a4b5c6"
+          },
+          "contractNumber": {
+            "type": "string",
+            "example": "PRE-2026-000001"
+          },
+          "client": {
+            "$ref": "#/components/schemas/User"
+          },
+          "collateral": {
+            "$ref": "#/components/schemas/Collateral"
+          },
+          "principal": {
+            "type": "number"
+          },
+          "outstandingPrincipal": {
+            "type": "number"
+          },
+          "monthlyRate": {
+            "type": "number"
+          },
+          "termDays": {
+            "type": "integer"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "activo",
+              "vencido",
+              "rescatado"
+            ]
+          },
+          "quote": {
+            "$ref": "#/components/schemas/Quote"
+          }
+        }
+      },
+      "Contract": {
+        "type": "object",
+        "properties": {
+          "contractNumber": {
+            "type": "string"
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "client": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string",
+                "format": "email",
+                "example": "cliente@ejemplo.com"
+              },
+              "documentId": {
+                "type": "string",
+                "example": "****321"
+              }
+            }
+          },
+          "collateral": {
+            "type": "object"
+          },
+          "terms": {
+            "type": "object",
+            "properties": {
+              "principal": {
+                "type": "number"
+              },
+              "monthlyRate": {
+                "type": "number"
+              },
+              "termDays": {
+                "type": "integer"
+              },
+              "startDate": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "dueDate": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          },
+          "clauses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Payment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "665f1c2e8b3a4c0012a4b5c6"
+          },
+          "loan": {
+            "oneOf": [
+              {
+                "type": "string",
+                "example": "665f1c2e8b3a4c0012a4b5c6"
+              },
+              {
+                "type": "object"
+              }
+            ]
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "abono_capital",
+              "pago_interes",
+              "renovacion",
+              "rescate"
+            ]
+          },
+          "amount": {
+            "type": "number"
+          },
+          "interestPortion": {
+            "type": "number"
+          },
+          "capitalPortion": {
+            "type": "number"
+          },
+          "balanceAfter": {
+            "type": "number"
+          },
+          "receiptNumber": {
+            "type": "string",
+            "example": "REC-2026-000001"
+          },
+          "paidAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      },
+      "Notification": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "665f1c2e8b3a4c0012a4b5c6"
+          },
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "read": {
+            "type": "boolean"
+          },
+          "loan": {
+            "type": "string",
+            "example": "665f1c2e8b3a4c0012a4b5c6"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "StaffSummary": {
+        "type": "object",
+        "properties": {
+          "pendingRequests": {
+            "type": "integer"
+          },
+          "activeLoans": {
+            "type": "integer"
+          },
+          "overdueLoans": {
+            "type": "integer"
+          },
+          "dueSoonLoans": {
+            "type": "integer"
+          },
+          "custodyCount": {
+            "type": "integer"
+          },
+          "portfolioOutstanding": {
+            "type": "number"
+          },
+          "paymentsToday": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "number"
+              },
+              "count": {
+                "type": "integer"
+              }
+            }
+          },
+          "paymentsMonth": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "number"
+              },
+              "count": {
+                "type": "integer"
+              }
+            }
+          },
+          "oldestPendingRequests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LoanRequest"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,49 @@
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#E9EEF0','primaryTextColor':'#30383B','primaryBorderColor':'#23404A','lineColor':'#23404A','actorBkg':'#23404A','actorTextColor':'#FFFFFF','actorBorder':'#23404A','signalColor':'#30383B','noteBkgColor':'#F7EAE4','noteTextColor':'#30383B','fontFamily':'Arial','loopTextColor':'#30383B','labelBoxBkgColor':'#23404A','labelTextColor':'#FFFFFF','labelBoxBorderColor':'#23404A'}}}%%
+sequenceDiagram
+    autonumber
+    actor U as Usuario (cliente / empleado)
+    participant SPA as SPA React (Vite)
+    participant API as API REST (Express)
+    participant MW as Middlewares JWT + RBAC
+    participant DB as MongoDB (Mongoose)
+
+    rect rgb(233,238,240)
+    Note over U,DB: A. Autenticación (RF-002)
+    U->>SPA: Ingresa correo y contraseña
+    SPA->>API: POST /api/auth/login {email, password}
+    API->>MW: authLimiter + validate (lista blanca)
+    API->>DB: User.findOne({email}).select('+password')
+    DB-->>API: Documento usuario (hash bcrypt)
+    API->>API: bcrypt.compare(password, hash)
+    alt Credenciales inválidas o cuenta sin verificar
+        API-->>SPA: 401 / 403 {success:false, code}
+        SPA-->>U: Muestra error
+    else Credenciales válidas
+        API->>API: jwt.sign({sub, role}, JWT_SECRET, HS256, exp 60m)
+        API-->>SPA: 200 {token, tokenType:"Bearer", user}
+        SPA->>SPA: Guarda token (localStorage) y usuario en AuthContext
+        SPA-->>U: Redirige a /app o /panel según rol
+    end
+    end
+
+    rect rgb(245,243,238)
+    Note over U,DB: B. Petición protegida + autorización RBAC
+    U->>SPA: Acción (p. ej. aprobar solicitud)
+    SPA->>API: PATCH /api/loan-requests/:id/approve<br/>Authorization: Bearer <JWT>
+    API->>MW: authenticate: jwt.verify(token, secret, HS256)
+    MW->>DB: User.findById(sub) (activo?)
+    DB-->>MW: Usuario
+    MW->>MW: authorize('empleado','admin') ¿rol permitido?
+    alt Token inválido o expirado
+        MW-->>SPA: 401 AUTH_TOKEN_EXPIRED / AUTH_INVALID_TOKEN
+        SPA->>SPA: Limpia sesión y redirige a /login
+    else Rol no autorizado
+        MW-->>SPA: 403 FORBIDDEN
+    else Autorizado
+        MW->>API: next() con req.user
+        API->>DB: Crea préstamo, actualiza solicitud y garantía
+        DB-->>API: OK
+        API-->>SPA: 200 {success:true, data}
+        SPA-->>U: Confirma operación
+    end
+    end
