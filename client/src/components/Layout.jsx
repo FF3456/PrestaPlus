@@ -22,17 +22,11 @@ const STAFF_NAV = [
   ['/panel/pagos', 'Registro de pagos'],
   ['/panel/notificaciones', 'Notificaciones'],
   ['/panel/perfil', 'Mi perfil'],
-  ['/panel/api-docs', 'Documentación API'],
 ];
 
 function Logo() {
   return (
-    <span className="flex items-center gap-2 text-lg font-semibold text-white">
-      <span className="grid h-8 w-8 place-items-center rounded-lg bg-paper text-brand-600" aria-hidden="true">
-        +
-      </span>
-      PRESTA+
-    </span>
+    <span className="text-xl font-bold tracking-[0.12em] text-white">PRESTA<span className="text-accent-500">+</span></span>
   );
 }
 
@@ -66,7 +60,7 @@ export default function Layout() {
           key={to}
           to={to}
           end={end}
-          className={({ isActive }) => `flex min-h-[44px] items-center justify-between rounded-lg px-3 font-medium ${isActive ? 'bg-white text-brand-600' : 'text-white hover:bg-brand-500'}`}
+          className={({ isActive }) => `flex min-h-[44px] items-center justify-between rounded-md px-3 font-medium transition-colors ${isActive ? 'bg-white/10 text-cyan-300 ring-1 ring-white/10' : 'text-slate-200 hover:bg-white/10 hover:text-white'}`}
         >
           {label}
           {to.endsWith('notificaciones') && unread > 0 && (
@@ -86,7 +80,7 @@ export default function Layout() {
       </p>
       <p className="mb-3 text-xs text-white/80">{ROLE_LABEL[user.role]}</p>
       <button
-        className="btn w-full border border-white/60 text-white hover:bg-brand-500"
+        className="btn w-full border border-white/30 text-white hover:border-accent-500 hover:bg-white/10"
         onClick={() => {
           logout();
           navigate('/login');
@@ -104,21 +98,21 @@ export default function Layout() {
       </a>
 
       {/* Barra superior (móvil) */}
-      <header className="sticky top-0 z-40 flex items-center justify-between bg-brand-600 px-4 py-3 lg:hidden">
+      <header className="sticky top-0 z-40 flex items-center justify-between bg-navy-900 px-4 py-3 lg:hidden">
         <Logo />
-        <button className="btn border border-white/60 text-white" aria-expanded={open} aria-controls="menu-movil" onClick={() => setOpen((o) => !o)}>
+        <button className="btn border border-white/30 text-white hover:border-accent-500 hover:bg-white/10" aria-expanded={open} aria-controls="menu-movil" onClick={() => setOpen((o) => !o)}>
           {open ? 'Cerrar' : 'Menú'}
         </button>
       </header>
       {open && (
-        <div id="menu-movil" className="flex flex-col gap-4 bg-brand-600 px-4 pb-4 lg:hidden">
+        <div id="menu-movil" className="flex flex-col gap-4 bg-navy-900 px-4 pb-4 lg:hidden">
           {links}
           {account}
         </div>
       )}
 
       {/* Barra lateral (escritorio) */}
-      <aside className="hidden w-64 shrink-0 flex-col justify-between gap-6 bg-brand-600 p-4 lg:sticky lg:top-0 lg:flex lg:h-screen">
+      <aside className="hidden w-64 shrink-0 flex-col justify-between gap-6 bg-navy-900 p-4 lg:sticky lg:top-0 lg:flex lg:h-screen">
         <div className="space-y-6">
           <Logo />
           {links}
@@ -126,7 +120,7 @@ export default function Layout() {
         {account}
       </aside>
 
-      <main id="contenido" className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
+      <main id="contenido" className="min-w-0 flex-1 bg-paper p-4 sm:p-6 lg:p-8">
         {sessionExpired && <Alert tone="warning" className="mb-4">Tu sesión expiró. Inicia sesión nuevamente.</Alert>}
         <div className="mx-auto max-w-6xl">
           <Outlet context={{ base }} />

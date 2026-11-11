@@ -191,7 +191,7 @@ export function Tabs({ tabs, value, onChange }) {
           role="tab"
           aria-selected={value === t.value}
           onClick={() => onChange(t.value)}
-          className={`min-h-[40px] rounded-full px-4 text-sm font-medium ${value === t.value ? 'bg-brand-600 text-white' : 'border border-brand-500/50 bg-white text-brand-600 hover:bg-brand-50'}`}
+          className={`min-h-[40px] rounded-none px-4 text-sm font-medium ${value === t.value ? 'bg-brand-600 text-white' : 'border border-brand-500/50 bg-white text-brand-600 hover:bg-brand-50'}`}
         >
           {t.label}
         </button>

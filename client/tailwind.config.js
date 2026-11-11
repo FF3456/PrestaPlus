@@ -1,16 +1,18 @@
-/** Tokens del sistema de diseño de Figma (PRESTA+). Las variantes -700 se añaden para texto con contraste WCAG AA. */
+/** Tokens del sistema visual de PRESTA+. */
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
   theme: {
     extend: {
       colors: {
-        brand: { 50: '#E9EEF0', 100: '#D3DEE1', 500: '#496A73', 600: '#23404A', 700: '#1B323A' },
-        ink: { 900: '#30383B', 600: '#5B686C' },
-        paper: '#F5F3EE',
-        success: { 50: '#E7EFE9', 500: '#5F8068', 700: '#3F5B48' },
-        warning: { 50: '#F7EAE4', 500: '#B8755C', 700: '#8A4A33' },
-        danger: { 50: '#F5E6E6', 500: '#A65D5D', 700: '#7E3F3F' },
+        brand: { 50: '#EFF6FF', 100: '#DBEAFE', 500: '#2563EB', 600: '#2563EB', 700: '#1D4ED8' },
+        navy: { 800: '#1E293B', 900: '#0F172A' },
+        accent: { 50: '#ECFEFF', 500: '#06B6D4', 600: '#0891B2' },
+        ink: { 900: '#0F172A', 600: '#475569' },
+        paper: '#F8FAFC',
+        success: { 50: '#ECFDF5', 500: '#10B981', 700: '#047857' },
+        warning: { 50: '#FFFBEB', 500: '#F59E0B', 700: '#B45309' },
+        danger: { 50: '#FEF2F2', 500: '#EF4444', 700: '#B91C1C' },
       },
       fontFamily: { sans: ['Inter', 'Arial', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
       fontSize: { h1: ['2rem', { lineHeight: '2.5rem', fontWeight: '600' }], h2: ['1.5rem', { lineHeight: '2rem', fontWeight: '600' }], h3: ['1.125rem', { lineHeight: '1.75rem', fontWeight: '500' }] },

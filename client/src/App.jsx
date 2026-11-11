@@ -20,7 +20,6 @@ import StaffDashboard from './pages/StaffDashboard.jsx';
 import RequestDetail from './pages/RequestDetail.jsx';
 import Custody from './pages/Custody.jsx';
 import Users from './pages/Users.jsx';
-import ApiDocs from './pages/ApiDocs.jsx';
 
 const STAFF = ['empleado', 'admin'];
 
@@ -58,7 +57,6 @@ export default function App() {
         <Route path="pagos" element={<PaymentsList />} />
         <Route path="notificaciones" element={<Notifications />} />
         <Route path="perfil" element={<Profile />} />
-        <Route path="api-docs" element={<ApiDocs />} />
         <Route path="usuarios" element={<ProtectedRoute roles={['admin']}><Users /></ProtectedRoute>} />
       </Route>
 
