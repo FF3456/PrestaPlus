@@ -27,15 +27,15 @@ async function ensureUser(data, password) {
 
 const admin = await ensureUser(
   { firstName: 'Ana', lastName: 'Administradora', email: 'admin@prestamas.test', role: ROLES.ADMIN },
-  process.env.SEED_ADMIN_PASSWORD || 'Admin#2026',
+  process.env.SEED_ADMIN_PASSWORD || 'Admin',
 );
 const staff = await ensureUser(
   { firstName: 'Eduardo', lastName: 'Tasador', email: 'empleado@prestamas.test', role: ROLES.EMPLOYEE },
-  process.env.SEED_STAFF_PASSWORD || 'Empleado#2026',
+  process.env.SEED_STAFF_PASSWORD || 'Empleado',
 );
 const client = await ensureUser(
   { firstName: 'Carlos', lastName: 'Mendoza', email: 'cliente@prestamas.test', role: ROLES.CLIENT, documentId: '7654321', phone: '+591 70012345', address: 'Av. Blanco Galindo km 5, Cochabamba' },
-  process.env.SEED_CLIENT_PASSWORD || 'Cliente#2026',
+  process.env.SEED_CLIENT_PASSWORD || 'Cliente',
 );
 
 const photo = [{ url: '/uploads/placeholder.svg', filename: 'placeholder.svg' }];

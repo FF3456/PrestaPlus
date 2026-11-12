@@ -12,8 +12,8 @@
 }
 
 @layer components {
-  .btn { @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-none px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60; }
-  .btn-primary { @apply btn bg-brand-600 text-white shadow-sm hover:bg-brand-700; }
+  .btn { @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold shadow-sm transition-all hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none; }
+  .btn-primary { @apply btn bg-brand-600 text-white hover:bg-brand-700; }
   .btn-secondary { @apply btn border border-brand-500 bg-white text-brand-700 hover:bg-brand-50; }
   .btn-danger { @apply btn bg-danger-700 text-white hover:bg-danger-700/90; }
   .input { @apply min-h-[44px] w-full rounded-none border border-slate-300 bg-white px-3 text-ink-900 placeholder:text-ink-600/70 focus:border-brand-600; }

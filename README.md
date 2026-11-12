@@ -1,119 +1,320 @@
-# PRESTA+ · Plataforma inteligente de préstamos prendarios
+# PRESTA+ | Sistema de gestión de préstamos prendarios
 
-Sistema web **fullstack** (React + Express + MongoDB) para gestionar préstamos prendarios: el cliente registra su garantía y solicita un préstamo; el personal tasa, aprueba, genera el contrato digital, registra pagos/renovaciones/rescates y controla la custodia y los vencimientos.
+PRESTA+ es un sistema web desarrollado para administrar los procesos de una casa de préstamos prendarios. A través de la aplicación, los clientes pueden registrar artículos como garantía y realizar solicitudes de préstamo. Por otra parte, el personal encargado puede revisar las solicitudes, realizar la tasación de los artículos, aprobar o rechazar operaciones y gestionar los préstamos.
 
-> **Proyecto Integrador · Tecnologías en Internet — Segunda Entrega (Producto implementado y repositorio GitHub)**
-> Universidad Adventista de Bolivia · Ingeniería de Sistemas · Docente: Ing. Victor Hugo Sarzuri Flores
+El sistema también permite registrar pagos, renovaciones y rescates, además de consultar las garantías que se encuentran en custodia y llevar un control de los préstamos próximos a vencer o vencidos.
 
-| | |
+## Tecnologías utilizadas
+
+| Componente | Tecnología |
 |---|---|
-| **Frontend** | React 18 + Vite + Tailwind CSS 3 (tokens del sistema de diseño de Figma) |
-| **Backend** | Node.js 18+ · Express 4 · API REST |
-| **Base de datos** | MongoDB (Atlas o local) con Mongoose 8 |
-| **Seguridad** | JWT (HS256, 60 min) · bcryptjs (salt ≥ 10) · RBAC · AES-256-GCM · Helmet · rate limiting · validación por lista blanca |
-| **Documentación** | Swagger UI / OpenAPI 3.0 en `/api-docs` · colección Postman · informe técnico en `docs/` |
+| Frontend | React 18, Vite y Tailwind CSS 3 |
+| Backend | Node.js 18+ y Express 4 |
+| Base de datos | MongoDB y Mongoose 8 |
+| Autenticación | JWT (HS256) |
+| Cifrado de contraseñas | bcryptjs |
+| Seguridad | RBAC, AES-256-GCM, Helmet y rate limiting |
+| Documentación API | Swagger UI y OpenAPI 3.0 |
+| Pruebas | node:test |
+| Pruebas de API | Postman |
 
-## Funcionalidades (RF-001 … RF-014)
+## Funcionalidades del sistema
 
-- **Cuentas:** registro con OTP por correo, login, recuperación de contraseña, perfil y cambio de contraseña.
-- **Cliente:** registro de garantía con fotos, **pre-evaluación** instantánea, solicitud de préstamo, seguimiento de estado, contrato digital, historial y comprobantes, notificaciones.
-- **Empleado:** evaluación y **tasación**, aprobación/rechazo con motivo, **contrato digital**, registro de abonos, pago de intereses, renovación y **rescate**, garantías en custodia, vencidos y por vencer, dashboard.
-- **Administrador:** alta/baja de personal.
+El sistema contempla los requerimientos funcionales RF-001 al RF-014 y organiza las operaciones según el tipo de usuario.
+
+### Gestión de cuentas
+- Registro de usuarios con verificación mediante código OTP enviado al correo.
+- Inicio de sesión.
+- Recuperación de contraseña.
+- Consulta y edición del perfil.
+- Cambio de contraseña.
+
+### Funciones del cliente
+- Registro de artículos que se utilizarán como garantía.
+- Carga de fotografías de los artículos.
+- Preevaluación del valor de la garantía.
+- Registro de solicitudes de préstamo.
+- Consulta del estado de las solicitudes.
+- Acceso al contrato digital.
+- Consulta del historial de préstamos y comprobantes.
+- Recepción de notificaciones.
+
+### Funciones del empleado
+- Revisión de solicitudes recibidas.
+- Evaluación y tasación de las garantías.
+- Aprobación o rechazo de solicitudes con su respectivo motivo.
+- Generación de contratos digitales.
+- Registro de abonos y pagos de intereses.
+- Gestión de renovaciones y rescates.
+- Consulta de artículos en custodia.
+- Seguimiento de préstamos vencidos y próximos a vencer.
+- Consulta del dashboard de operaciones.
+
+### Funciones del administrador
+- Registro y administración de las cuentas del personal.
+- Alta y baja de empleados.
 
 ## Estructura del repositorio
 
-```
+El proyecto está organizado en dos módulos principales, el frontend y el backend, además de una carpeta destinada a la documentación y los archivos necesarios para ejecutar el sistema.
+
+```text
 presta-plus/
-├── client/              # SPA React (Vite + Tailwind)
-│   └── src/ (api, components, context, pages, utils)
-├── server/              # API Node.js / Express
-│   ├── src/ (config, constants, controllers, docs, middlewares, models, routes, services, utils)
-│   ├── scripts/         # seed.js, export-docs.js
-│   └── tests/           # pruebas automatizadas (node:test)
-├── docs/                # Informe técnico, diagramas (C4, secuencia JWT), OpenAPI y Postman
-├── docker-compose.yml   # MongoDB local opcional
-├── .env.example         # (+ server/.env.example y client/.env.example)
+│
+├── client/                  # Aplicación frontend
+│   └── src/
+│       ├── api/
+│       ├── components/
+│       ├── context/
+│       ├── pages/
+│       └── utils/
+│
+├── server/                  # API y lógica del sistema
+│   ├── src/
+│   │   ├── config/
+│   │   ├── constants/
+│   │   ├── controllers/
+│   │   ├── docs/
+│   │   ├── middlewares/
+│   │   ├── models/
+│   │   ├── routes/
+│   │   ├── services/
+│   │   └── utils/
+│   │
+│   ├── scripts/
+│   └── tests/
+│
+├── docs/                    # Documentación del proyecto
+│   ├── postman/
+│   ├── openapi.json
+│   ├── diagramas
+│   └── informe técnico
+│
+├── docker-compose.yml
+├── .env.example
 └── .gitignore
 ```
 
-## Manual de ejecución
+## Instalación y configuración
 
 ### Requisitos previos
-- Node.js **18.18+** (recomendado 20 LTS) y npm
-- MongoDB local (o Docker) **o** un clúster gratuito de [MongoDB Atlas](https://www.mongodb.com/atlas)
-- Git
 
-### 1. Clonar e instalar
+Para ejecutar el proyecto se necesita:
+
+- Node.js 18.18 o superior, preferentemente versión 20 LTS.
+- npm.
+- MongoDB local, Docker o una cuenta en [MongoDB Atlas](https://www.mongodb.com/atlas).
+- Git.
+
+### 1. Clonar el repositorio
+
+Desde una terminal, ejecutar:
+
 ```bash
 git clone https://github.com/<USUARIO>/presta-plus.git
 cd presta-plus
-npm run install:all          # instala server/ y client/
 ```
 
-### 2. Base de datos
+Instalar las dependencias de ambos módulos:
+
 ```bash
-docker compose up -d         # MongoDB 7 en localhost:27017   (o use su URI de Atlas)
+npm run install:all
 ```
 
-### 3. Variables de entorno
+### 2. Configurar la base de datos
+
+Para utilizar MongoDB local mediante Docker, ejecutar:
+
+```bash
+docker compose up -d
+```
+
+El servicio utilizará el puerto `27017`.
+
+Si se utiliza MongoDB Atlas, se debe copiar la URI de conexión del clúster y colocarla en el archivo de configuración del servidor.
+
+### 3. Configurar las variables de entorno
+
+Crear los archivos `.env` a partir de los ejemplos incluidos:
+
 ```bash
 copy server\.env.example server\.env
 copy client\.env.example client\.env
 ```
-Edite `server/.env` y genere claves propias:
+
+En el archivo `server/.env` se deben revisar los valores de conexión y las claves utilizadas por el sistema.
+
+Para generar una clave JWT:
+
 ```bash
 node -e "console.log('JWT_SECRET='+require('crypto').randomBytes(48).toString('hex'))"
+```
+
+Para generar la clave de cifrado:
+
+```bash
 node -e "console.log('ENCRYPTION_KEY='+require('crypto').randomBytes(32).toString('hex'))"
 ```
-(`MONGODB_URI` ya apunta a `mongodb://127.0.0.1:27017/prestamas`.)
 
-### 4. Datos de demostración (opcional)
+La conexión predeterminada de MongoDB es:
+
+```env
+MONGODB_URI=mongodb://127.0.0.1:27017/prestamas
+```
+
+### 4. Cargar usuarios de prueba
+
+El proyecto incluye un script para generar datos de demostración. Para ejecutarlo:
+
 ```bash
 npm run seed
 ```
-| Rol | Correo | Contraseña (solo desarrollo) |
+
+Se pueden utilizar las siguientes cuentas durante las pruebas:
+
+| Tipo de usuario | Correo | Contraseña |
 |---|---|---|
-| Administrador | `admin@prestamas.test` | `Admin#2026` |
-| Empleado | `empleado@prestamas.test` | `Empleado#2026` |
-| Cliente | `cliente@prestamas.test` | `Cliente#2026` |
+| Administrador | admin@prestamas.test | Admin#2026 |
+| Empleado | empleado@prestamas.test | Empleado#2026 |
+| Cliente | cliente@prestamas.test | Cliente#2026 |
 
-### 5. Ejecutar
-```bash
-npm run dev:server           # API  → http://localhost:4000   (Swagger: /api-docs)
-npm run dev:client           # SPA  → http://localhost:5173
-```
-Sin SMTP configurado, el **código OTP** se imprime en la consola del servidor y (con `DEV_EXPOSE_CODES=true`) se muestra en pantalla.
+Estas credenciales son para el entorno de desarrollo y no deben utilizarse en una instalación de producción.
 
-### 6. Pruebas
-```bash
-npm test                     # 23 pruebas: reglas de préstamos, RBAC, validación, AES-256-GCM, OpenAPI
-```
-Pruebas funcionales con Swagger UI o Postman: ver `docs/postman/` y la sección 8 del informe.
+### 5. Iniciar la aplicación
 
-### 7. Producción
+Para ejecutar el sistema se necesitan dos terminales abiertas en la carpeta principal del repositorio.
+
+**Backend**
+
 ```bash
-npm run build                # genera client/dist
+npm run dev:server
 ```
-Configure en el servidor: `NODE_ENV=production`, `DEV_EXPOSE_CODES=false`, `CLIENT_URL=https://su-frontend`, `MONGODB_URI` de Atlas y claves nuevas. Sirva la API detrás de HTTPS (TLS 1.3 en el proveedor/proxy). En el frontend defina `VITE_API_URL=https://su-api/api`.
+
+La API se ejecuta en:
+
+`http://localhost:4000`
+
+**Frontend**
+
+```bash
+npm run dev:client
+```
+
+La aplicación web se ejecuta en:
+
+`http://localhost:5173`
+
+La documentación de los servicios está disponible mediante Swagger:
+
+`http://localhost:4000/api-docs`
+
+Cuando no existe una configuración SMTP, el código OTP se muestra en la consola del servidor. Durante el desarrollo también puede visualizarse en pantalla si se encuentra habilitada la variable `DEV_EXPOSE_CODES=true`.
+
+## Pruebas
+
+Para ejecutar las pruebas automatizadas se utiliza:
+
+```bash
+npm test
+```
+
+Actualmente, el proyecto incluye 23 pruebas relacionadas con:
+
+- Cálculos y reglas de los préstamos.
+- Control de acceso según los roles.
+- Validación de datos.
+- Cifrado AES-256-GCM.
+- Estructura de la documentación OpenAPI.
+
+También se pueden realizar pruebas manuales utilizando Swagger UI o Postman. La colección se encuentra en `docs/postman/`.
+
+## Preparación para producción
+
+Para generar la versión compilada del frontend:
+
+```bash
+npm run build
+```
+
+Los archivos resultantes se guardan en `client/dist`.
+
+Antes de desplegar el sistema se deben configurar las variables correspondientes al entorno de producción:
+
+- `NODE_ENV=production`
+- `DEV_EXPOSE_CODES=false`
+- `CLIENT_URL` con la dirección del frontend.
+- `MONGODB_URI` con la conexión a la base de datos de producción.
+- Claves JWT y de cifrado diferentes a las utilizadas durante el desarrollo.
+
+También se debe configurar `VITE_API_URL` en el frontend con la dirección de la API, por ejemplo:
+
+```env
+VITE_API_URL=https://su-api/api
+```
+
+La comunicación con el servidor debe realizarse mediante HTTPS.
 
 ## API REST
 
-Documentación interactiva: **`GET /api-docs`** (OpenAPI en `/api-docs.json` y `docs/openapi.json`). Autenticación: `POST /api/auth/login` → usar `Authorization: Bearer <token>`.
+El backend dispone de una API REST para conectar las operaciones del frontend con la base de datos.
 
-| Recurso | Endpoints principales |
+La documentación está disponible en las siguientes direcciones:
+
+| Recurso | Dirección |
 |---|---|
-| Auth | `POST /auth/register · /verify-otp · /login · /forgot-password · /reset-password`, `GET /auth/me` |
-| Usuarios | `PUT /users/me`, `PATCH /users/me/password`, `GET/POST /users` *(admin)* |
-| Garantías | `POST /collaterals/pre-evaluation`, `POST/GET /collaterals`, `GET/PUT/DELETE /collaterals/:id` |
-| Solicitudes | `POST/GET /loan-requests`, `PATCH /loan-requests/:id/appraisal · /approve · /reject` |
-| Préstamos | `GET /loans`, `GET /loans/custody`, `GET /loans/:id · /quote · /contract`, `POST /loans/:id/payments` |
-| Pagos | `GET /payments`, `GET /payments/:id` |
-| Otros | `GET /notifications`, `GET /dashboard/summary`, `GET /health` |
+| Swagger UI | `/api-docs` |
+| OpenAPI JSON | `/api-docs.json` |
+| Archivo OpenAPI | `docs/openapi.json` |
+
+Para utilizar los endpoints protegidos primero se debe iniciar sesión mediante:
+
+```http
+POST /api/auth/login
+```
+
+La respuesta proporciona un token JWT que debe enviarse en las siguientes solicitudes mediante la cabecera:
+
+```http
+Authorization: Bearer <token>
+```
+
+### Principales endpoints
+
+| Recurso | Operaciones disponibles |
+|---|---|
+| Autenticación | Registro, verificación OTP, login y recuperación de contraseña |
+| Usuarios | Consulta y actualización de perfil, cambio de contraseña y administración |
+| Garantías | Registro, preevaluación, consulta, actualización y eliminación |
+| Solicitudes | Registro, consulta, tasación, aprobación y rechazo |
+| Préstamos | Consulta, cotización, contratos, pagos y custodia |
+| Pagos | Registro y consulta de pagos |
+| Notificaciones | Consulta de notificaciones |
+| Dashboard | Resumen de operaciones |
+| Health | Comprobación del estado de la API |
+
+Para conocer los parámetros, métodos HTTP y respuestas de cada endpoint se puede consultar la documentación de Swagger.
 
 ## Seguridad
 
-Contraseñas con **bcrypt** (salt ≥ 10) · **JWT** firmado con expiración de 60 min · **RBAC** en middleware (`cliente`, `empleado`, `admin`) y verificación de propiedad del recurso · documento de identidad cifrado con **AES-256-GCM** · validación por lista blanca (anti mass-assignment e inyección de operadores NoSQL) · Helmet, CORS restringido y rate limiting (más estricto en login/OTP) · subida de imágenes con tipo/tamaño controlado y nombres aleatorios · **ningún secreto en el repositorio** (`.env` ignorado).
+Durante el desarrollo se incorporaron mecanismos para proteger las cuentas, los datos y las operaciones realizadas dentro del sistema.
 
-## Equipo
+Entre ellos se encuentran:
 
-Fidel Jairo Flores Arratia · Alvaro Felix Condori Cerda · Yamil Pedro Ramos Huanca · Mijael Emerson Vega Orellana
+- Uso de bcryptjs para almacenar las contraseñas mediante hashes.
+- Autenticación con JWT y expiración de 60 minutos.
+- Control de permisos mediante roles (cliente, empleado y administrador).
+- Verificación de acceso a los recursos según el usuario autenticado.
+- Cifrado de documentos de identidad mediante AES-256-GCM.
+- Validación de los datos recibidos para evitar asignaciones de campos no permitidos e inyecciones de operadores NoSQL.
+- Uso de Helmet para configurar cabeceras de seguridad.
+- Restricción de orígenes mediante CORS.
+- Limitación de solicitudes, especialmente en los endpoints de login y OTP.
+- Validación del tipo y tamaño de las imágenes cargadas.
+- Exclusión de archivos `.env` y claves privadas del repositorio.
+
+## Integrantes del proyecto
+
+- Fidel Jairo Flores Arratia
+- Alvaro Felix Condori Cerda
+- Yamil Pedro Ramos Huanca
+- Mijael Emerson Vega Orellana

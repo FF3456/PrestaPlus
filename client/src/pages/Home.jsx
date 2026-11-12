@@ -215,13 +215,13 @@ export default function Home() {
             <div className="flex items-center border border-white/20 bg-white p-1 text-xs font-semibold shadow-sm">
               <button
                 onClick={() => setLang('es')}
-                className={`px-2 py-1 transition-colors ${lang === 'es' ? 'bg-brand-600 text-white' : 'text-ink-600 hover:text-brand-600'}`}
+                className={`rounded-md px-2 py-1 shadow-sm transition-all hover:shadow-md ${lang === 'es' ? 'bg-brand-600 text-white' : 'text-ink-600 hover:text-brand-600'}`}
               >
                 ES
               </button>
               <button
                 onClick={() => setLang('en')}
-                className={`px-2 py-1 transition-colors ${lang === 'en' ? 'bg-brand-600 text-white' : 'text-ink-600 hover:text-brand-600'}`}
+                className={`rounded-md px-2 py-1 shadow-sm transition-all hover:shadow-md ${lang === 'en' ? 'bg-brand-600 text-white' : 'text-ink-600 hover:text-brand-600'}`}
               >
                 EN
               </button>
@@ -324,7 +324,7 @@ export default function Home() {
               </div>
               <button 
                 onClick={() => setShowReqModal(false)}
-                className="grid h-9 w-9 place-items-center border border-slate-200 text-ink-600 transition-colors hover:border-brand-500 hover:text-brand-600"
+                className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-ink-600 shadow-sm transition-all hover:border-brand-500 hover:text-brand-600 hover:shadow-md"
                 aria-label={t.closeModal}
               >
                 ✕
