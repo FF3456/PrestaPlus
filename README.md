@@ -111,7 +111,7 @@ Para ejecutar el proyecto se necesita:
 Desde una terminal, ejecutar:
 
 ```bash
-git clone https://github.com/<USUARIO>/presta-plus.git
+git clone https://github.com/FF3456/presta-plus.git
 cd presta-plus
 ```
 
@@ -174,9 +174,9 @@ Se pueden utilizar las siguientes cuentas durante las pruebas:
 
 | Tipo de usuario | Correo | Contraseña |
 |---|---|---|
-| Administrador | admin@prestamas.test | Admin#2026 |
-| Empleado | empleado@prestamas.test | Empleado#2026 |
-| Cliente | cliente@prestamas.test | Cliente#2026 |
+| Administrador | admin@prestamas.test | Admin |
+| Empleado | empleado@prestamas.test | Empleado |
+| Cliente | cliente@prestamas.test | Cliente |
 
 Estas credenciales son para el entorno de desarrollo y no deben utilizarse en una instalación de producción.
 

@@ -79,7 +79,7 @@ const TEXTS = {
       { name: 'Yamil Ramos', email: 'yamil.ramos@gmail.com' },
       { name: 'Mijael Vega', email: 'mijael.vega@gmail.com' }
     ],
-    docent: 'Docente: Ing. Victor Hugo Sarzuri Flores',
+    docent: 'Ayuda: Ing. Victor Hugo Sarzuri Flores',
     university: 'Universidad Adventista de Bolivia · Ingeniería de Sistemas',
     rights: 'Todos los derechos reservados.'
   },
@@ -158,8 +158,8 @@ const TEXTS = {
       { name: 'Yamil Ramos', email: 'yamil.ramos@gmail.com' },
       { name: 'Mijael Vega', email: 'mijael.vega@gmail.com' }
     ],
-    docent: 'Professor: Ing. Victor Hugo Sarzuri Flores',
-    university: 'Bolivia Adventist University · Systems Engineering',
+    docent: 'Help: Ing. Victor Hugo Sarzuri Flores',
+    university: 'Universidad Adventista de Bolivia · Systems Engineering',
     rights: 'All rights reserved.'
   }
 };

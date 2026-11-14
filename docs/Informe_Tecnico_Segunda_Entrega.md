@@ -7,7 +7,7 @@
 <div class="repo"><strong>Repositorio público en GitHub</strong><br><a href="https://github.com/&lt;USUARIO&gt;/presta-plus">https://github.com/&lt;USUARIO&gt;/presta-plus</a><br><span class="note">Reemplace &lt;USUARIO&gt; por la cuenta/organización donde se publicó el repositorio.</span></div>
 <table class="meta">
 <tr><th>Integrantes</th><td>Fidel Jairo Flores Arratia<br>Alvaro Felix Condori Cerda<br>Yamil Pedro Ramos Huanca<br>Mijael Emerson Vega Orellana</td></tr>
-<tr><th>Docente</th><td>Ing. Victor Hugo Sarzuri Flores</td></tr>
+<tr><th>Ayuda</th><td>Ing. Victor Hugo Sarzuri Flores</td></tr>
 <tr><th>Asignatura</th><td>Tecnologías en Internet</td></tr>
 <tr><th>Fecha</th><td>Noviembre de 2026</td></tr>
 <tr><th>Versión</th><td>v2.0 (continúa la Especificación Técnica y de Diseño v1.1)</td></tr>
@@ -22,7 +22,7 @@
 | Proyecto | PRESTA+ · Plataforma inteligente de préstamos prendarios |
 | Entrega | Segunda Entrega · Producto implementado y repositorio GitHub |
 | Integrantes | Fidel Jairo Flores Arratia, Alvaro Felix Condori Cerda, Yamil Pedro Ramos Huanca, Mijael Emerson Vega Orellana |
-| Docente | Ing. Victor Hugo Sarzuri Flores |
+| Ayuda | Ing. Victor Hugo Sarzuri Flores |
 | Asignatura | Tecnologías en Internet · Ingeniería de Sistemas · Universidad Adventista de Bolivia |
 | Fecha | Noviembre de 2026 |
 | **Repositorio público (GitHub)** | **https://github.com/<USUARIO>/presta-plus** |
